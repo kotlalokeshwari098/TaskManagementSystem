@@ -7,7 +7,8 @@ const createTask = async (req, res) => {
             description,
             status,
             priority,
-            dueDate
+            dueDate,
+            assignedTo
         } = req.body;
 
         if (!title) {
@@ -22,11 +23,8 @@ const createTask = async (req, res) => {
         }
 
         const selectedDate = new Date(dueDate);
-
         const today = new Date();
-
         today.setHours(0, 0, 0, 0);
-
         selectedDate.setHours(0, 0, 0, 0);
 
         if (selectedDate < today) {
@@ -41,12 +39,17 @@ const createTask = async (req, res) => {
             status,
             priority,
             dueDate,
-            user: req.user.userId
+            user: req.user.userId,
+            assignedTo: assignedTo || null
         });
+
+        const populatedTask = await Task.findById(task._id)
+            .populate("user", "name email")
+            .populate("assignedTo", "name email");
 
         res.status(201).json({
             message: "Task created successfully",
-            task
+            task: populatedTask
         });
 
     } catch (error) {
@@ -57,47 +60,39 @@ const createTask = async (req, res) => {
     }
 };
 
-// const getTasks = async (req, res) => {
-//     try {
-//         const tasks = await Task.find({
-//             user: req.user.userId
-//         }).sort({ createdAt: -1 });
-
-//         res.status(200).json({
-//             count: tasks.length,
-//             tasks
-//         });
-
-//     } catch (error) {
-//         res.status(500).json({
-//             message: "Server error",
-//             error: error.message
-//         });
-//     }
-// };
-
 const updateTask = async (req, res) => {
     try {
         const task = await Task.findOne({
             _id: req.params.id,
-            user: req.user.userId
+            $or: [
+                { user: req.user.userId },
+                { assignedTo: req.user.userId }
+            ]
         });
 
         if (!task) {
             return res.status(404).json({
-                message: "Task not found"
+                message: "Task not found or unauthorized"
             });
         }
 
-        const { title, description, status, priority, dueDate } = req.body;
+        const { title, description, status, priority, dueDate, assignedTo } = req.body;
 
         task.title = title ?? task.title;
         task.description = description ?? task.description;
         task.status = status ?? task.status;
         task.priority = priority ?? task.priority;
         task.dueDate = dueDate ?? task.dueDate;
+        
+        if (assignedTo !== undefined) {
+            task.assignedTo = assignedTo || null;
+        }
 
-        const updatedTask = await task.save();
+        await task.save();
+
+        const updatedTask = await Task.findById(task._id)
+            .populate("user", "name email")
+            .populate("assignedTo", "name email");
 
         res.status(200).json({
             message: "Task updated successfully",
@@ -114,6 +109,7 @@ const updateTask = async (req, res) => {
 
 const deleteTask = async (req, res) => {
     try {
+        // Only task creator can delete
         const task = await Task.findOneAndDelete({
             _id: req.params.id,
             user: req.user.userId
@@ -121,7 +117,7 @@ const deleteTask = async (req, res) => {
 
         if (!task) {
             return res.status(404).json({
-                message: "Task not found"
+                message: "Task not found or only the task creator can delete"
             });
         }
 
@@ -141,18 +137,24 @@ const completeTask = async (req, res) => {
     try {
         const task = await Task.findOne({
             _id: req.params.id,
-            user: req.user.userId
+            $or: [
+                { user: req.user.userId },
+                { assignedTo: req.user.userId }
+            ]
         });
 
         if (!task) {
             return res.status(404).json({
-                message: "Task not found"
+                message: "Task not found or unauthorized"
             });
         }
 
         task.status = "done";
+        await task.save();
 
-        const updatedTask = await task.save();
+        const updatedTask = await Task.findById(task._id)
+            .populate("user", "name email")
+            .populate("assignedTo", "name email");
 
         res.status(200).json({
             message: "Task marked as done",
@@ -170,6 +172,7 @@ const completeTask = async (req, res) => {
 const getTasks = async (req, res) => {
     try {
         const {
+            scope = "all",
             search,
             status,
             priority,
@@ -181,38 +184,32 @@ const getTasks = async (req, res) => {
 
         const pageNumber = Number(page);
         const limitNumber = Number(limit);
-
         const skip = (pageNumber - 1) * limitNumber;
 
-        const filter = {
-            user: req.user.userId
-        };
+        let scopeFilter = {};
+        if (scope === "created") {
+            scopeFilter = { user: req.user.userId };
+        } else if (scope === "assigned") {
+            scopeFilter = { assignedTo: req.user.userId };
+        } else {
+            scopeFilter = {
+                $or: [
+                    { user: req.user.userId },
+                    { assignedTo: req.user.userId }
+                ]
+            };
+        }
 
-        const allowedSortFields = [
-            "createdAt",
-            "dueDate",
-            "priority"
-        ];
-
-        const sortField = allowedSortFields.includes(sortBy)
-                ? sortBy
-                : "createdAt";
+        const filter = { ...scopeFilter };
 
         if (search) {
-            filter.$or = [
-                {
-                    title: {
-                        $regex: search,
-                        $options: "i"
-                    }
-                },
-                {
-                    description: {
-                        $regex: search,
-                        $options: "i"
-                    }
-                }
-            ];
+            const searchCondition = {
+                $or: [
+                    { title: { $regex: search, $options: "i" } },
+                    { description: { $regex: search, $options: "i" } }
+                ]
+            };
+            filter.$and = [searchCondition];
         }
 
         if (status) {
@@ -223,15 +220,16 @@ const getTasks = async (req, res) => {
             filter.priority = priority;
         }
 
+        const allowedSortFields = ["createdAt", "dueDate", "priority"];
+        const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+        const sortOrder = order === "asc" ? 1 : -1;
+        const sortOptions = { [sortField]: sortOrder };
+
         const totalTasks = await Task.countDocuments(filter);
 
-        const sortOrder = order === "asc" ? 1 : -1;
-
-        const sortOptions = {
-            [sortField]: sortOrder
-        };
-
         const tasks = await Task.find(filter)
+            .populate("user", "name email")
+            .populate("assignedTo", "name email")
             .sort(sortOptions)
             .skip(skip)
             .limit(limitNumber);
@@ -256,18 +254,22 @@ const getTasks = async (req, res) => {
 const getTaskAnalytics = async (req, res) => {
     try {
         const userId = req.user.userId;
+        const userFilter = {
+            $or: [
+                { user: userId },
+                { assignedTo: userId }
+            ]
+        };
 
-        const totalTasks = await Task.countDocuments({
-            user: userId
-        });
+        const totalTasks = await Task.countDocuments(userFilter);
 
         const completedTasks = await Task.countDocuments({
-            user: userId,
+            ...userFilter,
             status: "done"
         });
 
         const pendingTasks = await Task.countDocuments({
-            user: userId,
+            ...userFilter,
             status: { $in: ["todo", "in-progress"] }
         });
 

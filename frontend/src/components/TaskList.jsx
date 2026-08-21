@@ -248,6 +248,19 @@ function TaskList({
                             <th className="
                                 px-6
                                 py-4
+                                font-medium
+                                text-slate-500
+                                dark:text-slate-400
+                            ">
+
+                                Assignee
+
+                            </th>
+
+
+                            <th className="
+                                px-6
+                                py-4
                                 text-right
                                 font-medium
                                 text-slate-500
@@ -469,6 +482,47 @@ function TaskList({
                                         : "No date"
 
                                     }
+
+                                </td>
+
+
+
+                                {/* =================================================
+                                    ASSIGNEE / COLLABORATOR
+                                ================================================= */}
+
+                                <td className="
+                                    whitespace-nowrap
+                                    px-6
+                                    py-4
+                                    align-top
+                                ">
+
+                                    {task.assignedTo ? (
+
+                                        <div className="flex flex-col">
+
+                                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800/40 w-fit">
+
+                                                👤 {task.assignedTo.name || task.assignedTo.email}
+
+                                            </span>
+
+                                            {task.user && (
+                                                <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                                                    by {task.user.name || task.user.email}
+                                                </span>
+                                            )}
+
+                                        </div>
+
+                                    ) : (
+
+                                        <span className="inline-flex items-center text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 w-fit">
+                                            Personal
+                                        </span>
+
+                                    )}
 
                                 </td>
 

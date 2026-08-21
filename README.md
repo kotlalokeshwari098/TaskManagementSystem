@@ -113,19 +113,21 @@ All protected endpoints require an `Authorization` header formatted as:
 | `POST` | `/api/auth/register` | Public | Register a new user | `{ "name": "John", "email": "john@example.com", "password": "secretpassword" }` |
 | `POST` | `/api/auth/login` | Public | Authenticate user & retrieve JWT token | `{ "email": "john@example.com", "password": "secretpassword" }` |
 | `GET` | `/api/auth/me` | Protected | Get current authenticated user details | None |
+| `GET` | `/api/auth/users` | Protected | Fetch registered users list for task assignment | None |
 
 ### 2. Task Management Routes (`/api/tasks`)
 
 | Method | Endpoint | Access | Description | Request / Query Params |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/tasks` | Protected | Create a new task | Body: `{ "title": "Task 1", "description": "Details", "status": "todo", "priority": "high", "dueDate": "2026-09-01" }` |
-| `GET` | `/api/tasks` | Protected | Get user tasks (with search, filter, sort & pagination) | Query: `search`, `status`, `priority`, `page`, `limit`, `sortBy`, `order` |
+| `POST` | `/api/tasks` | Protected | Create a new task (optional `assignedTo` collaborator) | Body: `{ "title": "Task 1", "description": "Details", "status": "todo", "priority": "high", "dueDate": "2026-09-01", "assignedTo": "<userId>" }` |
+| `GET` | `/api/tasks` | Protected | Get user & assigned tasks (with search, filter, scope & pagination) | Query: `scope`, `search`, `status`, `priority`, `page`, `limit`, `sortBy`, `order` |
 | `GET` | `/api/tasks/analytics` | Protected | Fetch task summary metrics for analytics | Query: None |
-| `PUT` | `/api/tasks/:id` | Protected | Update an existing task | Body: Partial or full task updates (`title`, `description`, `status`, `priority`, `dueDate`) |
+| `PUT` | `/api/tasks/:id` | Protected | Update an existing task (creator or assignee) | Body: Partial or full task updates (`title`, `description`, `status`, `priority`, `dueDate`, `assignedTo`) |
 | `PATCH` | `/api/tasks/:id/done` | Protected | Mark a task status directly as `done` | Params: `id` |
-| `DELETE` | `/api/tasks/:id` | Protected | Permanently delete a task | Params: `id` |
+| `DELETE` | `/api/tasks/:id` | Protected | Permanently delete a task (task creator only) | Params: `id` |
 
 #### Query Parameters for `GET /api/tasks`:
+- `scope` *(string)*: Collaboration filter (`all`, `created`, `assigned`). Default: `all`.
 - `search` *(string)*: Case-insensitive search on `title` and `description`.
 - `status` *(string)*: Filter by task status (`todo`, `in-progress`, `done`).
 - `priority` *(string)*: Filter by priority (`low`, `medium`, `high`).

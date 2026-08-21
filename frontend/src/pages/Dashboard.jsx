@@ -55,6 +55,13 @@ function Dashboard() {
 
 
     // =========================
+    // SCOPE (COLLABORATION FILTER)
+    // =========================
+
+    const [scope, setScope] = useState("all");
+
+
+    // =========================
     // SORTING
     // =========================
 
@@ -105,6 +112,7 @@ function Dashboard() {
             const response = await api.get("/tasks", {
 
                 params: {
+                    scope,
                     page,
                     limit,
                     sortBy,
@@ -153,7 +161,7 @@ function Dashboard() {
 
         fetchTasks();
 
-    }, [page, sortBy, order]);
+    }, [page, sortBy, order, scope]);
 
 
     const handleTaskCreated = async () => {
@@ -245,7 +253,7 @@ function Dashboard() {
         try {
 
             await api.patch(
-                `/tasks/${taskId}/complete`
+                `/tasks/${taskId}/done`
             );
 
             toast.success("Task marked as completed!");
@@ -263,8 +271,7 @@ function Dashboard() {
                 error
             );
 
-           
-            toast.error( error.response?.data?.message ||"Failed to delete task");
+            toast.error(error.response?.data?.message || "Failed to complete task");
 
         }
 
@@ -488,6 +495,57 @@ function Dashboard() {
 
                 <section>
 
+                    {/* SCOPE FILTER TABS */}
+
+                    <div className="mb-6 flex border-b border-slate-200 dark:border-slate-800">
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setScope("all");
+                                setPage(1);
+                            }}
+                            className={`pb-3 px-4 text-sm font-medium border-b-2 cursor-pointer transition-colors ${
+                                scope === "all"
+                                    ? "border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 font-semibold"
+                                    : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                            }`}
+                        >
+                            All Tasks
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setScope("created");
+                                setPage(1);
+                            }}
+                            className={`pb-3 px-4 text-sm font-medium border-b-2 cursor-pointer transition-colors ${
+                                scope === "created"
+                                    ? "border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 font-semibold"
+                                    : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                            }`}
+                        >
+                            Created by Me
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setScope("assigned");
+                                setPage(1);
+                            }}
+                            className={`pb-3 px-4 text-sm font-medium border-b-2 cursor-pointer transition-colors ${
+                                scope === "assigned"
+                                    ? "border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 font-semibold"
+                                    : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                            }`}
+                        >
+                            Assigned to Me
+                        </button>
+
+                    </div>
+
 
                     {/* TASK HEADER + SORTING */}
 
@@ -506,7 +564,11 @@ function Dashboard() {
 
                             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
 
-                                My Tasks
+                                {scope === "created"
+                                    ? "Tasks Created by Me"
+                                    : scope === "assigned"
+                                        ? "Tasks Assigned to Me"
+                                        : "All Shared Tasks"}
 
                             </h2>
 

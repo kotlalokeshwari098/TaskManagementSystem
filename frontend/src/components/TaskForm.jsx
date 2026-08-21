@@ -20,40 +20,50 @@ function TaskForm({
         description: "",
         status: "todo",
         priority: "medium",
-        dueDate: ""
+        dueDate: "",
+        assignedTo: ""
     });
 
-
+    const [users, setUsers] = useState([]);
     const [errors, setErrors] = useState({});
-
     const [loading, setLoading] = useState(false);
-
     const [serverError, setServerError] = useState("");
 
+    // =========================
+    // FETCH USERS FOR ASSIGNMENT
+    // =========================
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const response = await api.get("/auth/users");
+                setUsers(response.data.users || []);
+            } catch (error) {
+                console.error("Failed to fetch users list:", error);
+            }
+        };
+        fetchUsers();
+    }, []);
 
     // =========================
     // EDIT MODE
     // =========================
 
     useEffect(() => {
-
         if (taskToEdit) {
-
             setFormData({
                 title: taskToEdit.title || "",
                 description: taskToEdit.description || "",
                 status: taskToEdit.status || "todo",
                 priority: taskToEdit.priority || "medium",
-
+                assignedTo: taskToEdit.assignedTo?._id || taskToEdit.assignedTo || "",
                 dueDate: taskToEdit.dueDate
                     ? new Date(taskToEdit.dueDate)
                         .toISOString()
                         .split("T")[0]
                     : ""
             });
-
         }
-
     }, [taskToEdit]);
 
 
@@ -648,6 +658,66 @@ function TaskForm({
                             )}
 
                         </div>
+
+                    </div>
+
+
+                    {/* =========================
+                        ASSIGN TO (COLLABORATOR)
+                    ========================= */}
+
+                    <div>
+
+                        <label className="
+                            mb-1.5
+                            block
+                            text-sm
+                            font-medium
+                            text-slate-700
+                            dark:text-slate-300
+                        ">
+
+                            Assign To (Collaborator)
+
+                        </label>
+
+
+                        <select
+                            name="assignedTo"
+                            value={formData.assignedTo}
+                            onChange={handleChange}
+                            className="
+                                w-full
+                                rounded-lg
+                                border
+                                border-slate-200
+                                dark:border-slate-600
+                                bg-white
+                                dark:bg-slate-700
+                                text-slate-900
+                                dark:text-white
+                                px-3
+                                py-2.5
+                                text-sm
+                                outline-none
+                                focus:border-slate-400
+                                dark:focus:border-indigo-500
+                            "
+                        >
+
+                            <option value="">
+                                Personal (Only Me)
+                            </option>
+
+                            {users.map((user) => (
+
+                                <option key={user._id} value={user._id}>
+                                    {user.name} ({user.email})
+                                </option>
+
+                            ))}
+
+                        </select>
 
                     </div>
 
