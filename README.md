@@ -3,6 +3,7 @@
 A robust, full-stack **Task Management Application** built using the **MERN Stack** (MongoDB, Express.js, React.js, Node.js). This application enables users to manage their daily tasks efficiently with features such as secure JWT authentication, real-time task analytics with visual charts, multi-criteria filtering, searching, server-side pagination, dark/light theme toggling, and task tracking.
 
 ---
+LIVE LINK: [task-management-system-ten-umber.vercel.app](https://task-management-system-ten-umber.vercel.app/)
 
 ## 📁 Directory Structure
 
